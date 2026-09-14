@@ -22,7 +22,7 @@ import os
 import sys
 import datetime
 import requests
-import nfl_data_py as nfl
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # 1. CONFIG
@@ -58,8 +58,16 @@ STAT_COLUMNS = [
 
 
 def get_latest_week_stats():
-    """Load this season's weekly player stats and return only the most recent week."""
-    df = nfl.import_weekly_data([SEASON])
+    """Load this season's weekly player stats directly from the nflverse-data
+    GitHub release (updated in-season, no third-party package lag)."""
+    url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/player_stats_{SEASON}.parquet"
+    try:
+        df = pd.read_parquet(url)
+    except Exception as e:
+        # Season file doesn't exist yet (e.g. too early in a new season) or fetch failed
+        print(f"Could not load player stats for {SEASON}: {e}")
+        return pd.DataFrame(), None
+
     if df.empty:
         return df, None
     latest_week = df["week"].max()
