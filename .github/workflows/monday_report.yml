@@ -1,0 +1,31 @@
+name: Frisco Bowl Weekly Report
+
+on:
+  schedule:
+    # Runs every Monday at 9:00 AM Central Time (14:00 UTC during CDT, 15:00 UTC during CST)
+    # GitHub Actions cron is UTC only, so this is set for CDT (UTC-5).
+    # During CST (UTC-6, winter), it will fire at 8:00 AM Central instead.
+    - cron: "0 14 * * 1"
+  workflow_dispatch: {}   # lets you manually trigger a run from the Actions tab
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install nfl_data_py requests
+
+      - name: Run report
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python frisco_bowl_report.py
