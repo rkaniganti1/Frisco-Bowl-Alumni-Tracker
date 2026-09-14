@@ -21,12 +21,11 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install nfl_data_py requests
+        run: pip install pandas requests pyarrow fsspec
 
       - name: Run report
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          SEASON: ${{ secrets.SEASON }}
         run: python frisco_bowl_report.py
