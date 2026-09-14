@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pandas requests pyarrow fsspec
+        run: pip install nflreadpy pandas requests pyarrow
 
       - name: Run report
         env:
