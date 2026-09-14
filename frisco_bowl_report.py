@@ -2,7 +2,7 @@
 """
 Frisco Bowl Weekly Stats Report
 --------------------------------
-Pulls the latest NFL weekly stats (via nflverse / nfl_data_py) for a curated
+Pulls the latest NFL weekly stats (via nflreadpy/nflverse) for a curated
 list of "notable Frisco Bowl alumni" and posts a formatted summary to a
 Discord channel via webhook.
 
@@ -23,6 +23,7 @@ import sys
 import datetime
 import requests
 import pandas as pd
+import nflreadpy as nfl
 
 # ---------------------------------------------------------------------------
 # 1. CONFIG
@@ -50,21 +51,13 @@ def get_notable_players():
     resp.raise_for_status()
     return [row["player_name"] for row in resp.json()]
 
-STAT_COLUMNS = [
-    "passing_yards", "passing_tds", "interceptions",
-    "rushing_yards", "rushing_tds",
-    "receptions", "receiving_yards", "receiving_tds",
-]
-
 
 def get_latest_week_stats():
-    """Load this season's weekly player stats directly from the nflverse-data
-    GitHub release (updated in-season, no third-party package lag)."""
-    url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/player_stats_{SEASON}.parquet"
+    """Load this season's weekly player stats via nflreadpy (actively maintained,
+    stays in sync with nflverse's current file formats)."""
     try:
-        df = pd.read_parquet(url)
+        df = nfl.load_player_stats([SEASON]).to_pandas()
     except Exception as e:
-        # Season file doesn't exist yet (e.g. too early in a new season) or fetch failed
         print(f"Could not load player stats for {SEASON}: {e}")
         return pd.DataFrame(), None
 
@@ -93,7 +86,7 @@ def build_player_report(df, latest_week, notable_players):
 
     for _, row in subset.iterrows():
         name = row["player_display_name"]
-        team = row.get("recent_team", "FA")
+        team = row.get("team", "FA")
         pos = row.get("position", "")
 
         stat_bits = []
@@ -101,7 +94,7 @@ def build_player_report(df, latest_week, notable_players):
             stat_bits.append(
                 f"{int(row['passing_yards'])} pass yds, "
                 f"{int(row.get('passing_tds', 0))} TD, "
-                f"{int(row.get('interceptions', 0))} INT"
+                f"{int(row.get('passing_interceptions', 0))} INT"
             )
         if row.get("rushing_yards", 0):
             stat_bits.append(
