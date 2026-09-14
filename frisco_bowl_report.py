@@ -74,18 +74,18 @@ def build_player_report(df, latest_week, notable_players):
             "table in Supabase."
         )
 
-    subset = df[df["player_display_name"].isin(notable_players)]
-
-    if subset.empty:
-        return (
-            f"No stats found for tracked Frisco Bowl alumni in Week {latest_week}. "
-            f"(They may have been on bye, inactive, or the name list needs updating.)"
-        )
-
     lines = [f"**🏈 Frisco Bowl Alumni Report — Week {latest_week}, {SEASON}**\n"]
+    stats_by_name = {
+        row["player_display_name"]: row
+        for _, row in df[df["player_display_name"].isin(notable_players)].iterrows()
+    }
 
-    for _, row in subset.iterrows():
-        name = row["player_display_name"]
+    for name in notable_players:
+        row = stats_by_name.get(name)
+        if row is None:
+            lines.append(f"• **{name}** — No stats recorded (DNP/inactive, or position has no tracked stats)")
+            continue
+
         team = row.get("team", "FA")
         pos = row.get("position", "")
 
@@ -108,11 +108,25 @@ def build_player_report(df, latest_week, notable_players):
                 f"{int(row.get('receiving_tds', 0))} TD"
             )
 
+        solo = row.get("def_tackles_solo", 0) or 0
+        assist = row.get("def_tackles_with_assist", 0) or 0
+        total_tackles = solo + assist
+        if total_tackles or row.get("def_sacks", 0) or row.get("def_interceptions", 0) or row.get("def_tds", 0):
+            def_bits = [f"{total_tackles:g} tkl"]
+            if row.get("def_sacks", 0):
+                def_bits.append(f"{row['def_sacks']:g} sack")
+            if row.get("def_interceptions", 0):
+                def_bits.append(f"{int(row['def_interceptions'])} INT")
+            if row.get("def_pass_defended", 0):
+                def_bits.append(f"{int(row['def_pass_defended'])} PD")
+            if row.get("def_tds", 0):
+                def_bits.append(f"{int(row['def_tds'])} TD")
+            stat_bits.append(", ".join(def_bits))
+
         stat_line = "; ".join(stat_bits) if stat_bits else "No stats recorded (DNP/inactive)"
         lines.append(f"• **{name}** ({pos}, {team}) — {stat_line}")
 
     return "\n".join(lines)
-
 
 def post_to_discord(content):
     if not DISCORD_WEBHOOK_URL:
